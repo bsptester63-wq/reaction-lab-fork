@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reaction Lab</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="title">Reaction Lab</h1>
+      <p class="subtitle">Test your reflex speed</p>
+    </header>
+
+    <main class="panel" id="panel">
+      <div class="panel-content" id="panelContent">
+        <p class="panel-text" id="panelText">Click button below to start</p>
+        <p class="panel-result" id="panelResult"></p>
+      </div>
+    </main>
+
+    <div class="controls">
+      <button class="btn" id="startBtn">Start</button>
+      <div class="best-score" id="bestScore"></div>
+    </div>
+
+    <section class="leaderboard">
+      <h2 class="leaderboard-title">Your Best Times</h2>
+      <ol class="leaderboard-list" id="leaderboardList"></ol>
+    </section>
+
+    <footer class="footer">
+      <p>Built with sharp edges and fast reflexes.</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
