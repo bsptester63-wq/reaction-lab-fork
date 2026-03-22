@@ -1,8 +1,8 @@
 # Reaction Lab
 
-**Test your reflex speed.**
+**Test your drag strip reflexes.**
 
-A minimal reaction time tester with a neo-brutalist UI. Click when the screen flashes, measure your reflexes in milliseconds, and compete against a mock leaderboard.
+A minimal drag racing reaction tester with a neo-brutalist UI. Stage up, watch the drag tree count down through the ambers, launch on green, and measure your reaction time in milliseconds.
 
 ## How to Run
 
@@ -25,24 +25,26 @@ npx serve .
 
 ## Features
 
-- Random trigger timing (1.5–5s delay)
-- Reaction measurement in milliseconds
-- False start detection
+- Drag racing light tree with prestage, stage, amber, green, and red bulbs
+- Randomized staging delay before the tree drops
+- 0.4s amber cadence leading into green
+- Red light detection for jumping before green
+- Reaction measurement in milliseconds from green to launch
 - Best score tracking (localStorage)
-- Mock leaderboard with user ranking
+- Personal top-five leaderboard
 - Responsive layout (desktop + mobile)
 
 ## Suggested Enhancements
 
-1. **Multiplayer mode** — Add real-time WebSocket-based head-to-head reaction battles
+1. **Bracket mode** — Add configurable pro tree vs sportsman tree timing and dial-in handicaps
 2. **Reaction history chart** — Track and visualize past attempts with a sparkline or bar chart
-3. **Sound & haptic cues** — Add an audio beep on trigger and vibration feedback on mobile for accessibility
+3. **Sound & haptic cues** — Add launch sounds, red-light buzzer, and vibration feedback on mobile for accessibility
 
 ## Metadata
 
 | Field | Value |
 |---|---|
 | **Title** | Reaction Lab |
-| **Tagline** | Test your reflex speed |
+| **Tagline** | Test your drag strip reflexes |
 | **Category** | Game / Interactive Tool |
-| **Ideal Thumbnail** | The bright red "Click now!" ready state with the bold title above |
+| **Ideal Thumbnail** | The drag tree lit up green with the launch time showing below |
