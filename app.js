@@ -2,14 +2,21 @@
 const State = {
   IDLE: 'idle',
   WAITING: 'waiting',
+  COUNTDOWN: 'countdown',
   READY: 'ready',
   RESULT: 'result',
-  FALSE_START: 'false-start',
+  RED_LIGHT: 'red-light',
 };
 
+const LIGHT_SEQUENCE = ['amber-1', 'amber-2', 'amber-3'];
+const TREE_INTERVAL_MS = 400;
+const RANDOM_DELAY_MIN_MS = 1200;
+const RANDOM_DELAY_RANGE_MS = 1800;
+const STORAGE_KEY = 'reactionlab-times';
+
 let state = State.IDLE;
-let timeoutId = null;
-let readyTimestamp = 0;
+let timeoutIds = [];
+let greenTimestamp = 0;
 
 // ── DOM ──
 const panel = document.getElementById('panel');
@@ -18,10 +25,38 @@ const panelResult = document.getElementById('panelResult');
 const startBtn = document.getElementById('startBtn');
 const bestScoreEl = document.getElementById('bestScore');
 const leaderboardList = document.getElementById('leaderboardList');
+const bulbs = Array.from(document.querySelectorAll('[data-light]'));
+
+function getBulb(name) {
+  return document.querySelector('[data-light="' + name + '"]');
+}
+
+function resetTreeLights() {
+  bulbs.forEach((bulb) => bulb.classList.remove('is-on'));
+}
+
+function lightBulb(name) {
+  const bulb = getBulb(name);
+  if (bulb) {
+    bulb.classList.add('is-on');
+  }
+}
+
+function clearScheduledTimeouts() {
+  timeoutIds.forEach((id) => clearTimeout(id));
+  timeoutIds = [];
+}
+
+function schedule(fn, delay) {
+  const id = setTimeout(() => {
+    timeoutIds = timeoutIds.filter((timeoutId) => timeoutId !== id);
+    fn();
+  }, delay);
+
+  timeoutIds.push(id);
+}
 
 // ── Local Storage ──
-const STORAGE_KEY = 'reactionlab-times';
-
 function getTopTimes() {
   const val = localStorage.getItem(STORAGE_KEY);
   if (!val) return [];
@@ -52,33 +87,44 @@ function setState(newState) {
   panel.className = 'panel panel--' + newState;
   panelResult.textContent = '';
 
+  resetTreeLights();
+  lightBulb('prestaged');
+  lightBulb('staged');
+
   switch (newState) {
     case State.IDLE:
-      panelText.textContent = 'Click button below to start';
-      startBtn.textContent = 'Start';
+      panelText.textContent = 'Click start, then launch on green.';
+      startBtn.textContent = 'Stage';
       break;
     case State.WAITING:
-      panelText.textContent = 'Wait for it\u2026';
-      startBtn.textContent = 'Waiting\u2026';
+      panelText.textContent = 'Get ready... tree is about to drop.';
+      startBtn.textContent = 'Staged';
+      break;
+    case State.COUNTDOWN:
+      panelText.textContent = 'Amber countdown is live. Leave on green!';
+      startBtn.textContent = 'Launch';
       break;
     case State.READY:
-      panelText.textContent = 'Click now!';
-      startBtn.textContent = 'Go!';
-      readyTimestamp = performance.now();
+      panelText.textContent = 'Green! Click to launch!';
+      startBtn.textContent = 'Launch';
+      lightBulb('green');
+      greenTimestamp = performance.now();
       break;
-    case State.FALSE_START:
-      panelText.textContent = 'Too soon!';
-      startBtn.textContent = 'Retry';
+    case State.RED_LIGHT:
+      panelText.textContent = 'Red light! You left before green.';
+      startBtn.textContent = 'Restage';
+      lightBulb('red');
       break;
     case State.RESULT:
-      startBtn.textContent = 'Retry';
+      startBtn.textContent = 'Run Again';
+      lightBulb('green');
       break;
   }
 }
 
 function showResult(ms) {
   setState(State.RESULT);
-  panelText.textContent = 'Your time';
+  panelText.textContent = 'Reaction time';
   panelResult.textContent = ms + ' ms';
 
   const prevBest = getBestScore();
@@ -87,37 +133,58 @@ function showResult(ms) {
   renderLeaderboard();
 
   if (prevBest === null || ms < prevBest) {
-    panelText.textContent = 'New best!';
+    panelText.textContent = 'New best light!';
   }
 }
 
-function startGame() {
-  setState(State.WAITING);
-  const delay = 1500 + Math.random() * 3500; // 1.5s – 5s
-  timeoutId = setTimeout(() => {
+function triggerRedLight() {
+  clearScheduledTimeouts();
+  setState(State.RED_LIGHT);
+}
+
+function beginTreeSequence() {
+  setState(State.COUNTDOWN);
+
+  LIGHT_SEQUENCE.forEach((lightName, index) => {
+    schedule(() => {
+      lightBulb(lightName);
+    }, index * TREE_INTERVAL_MS);
+  });
+
+  schedule(() => {
     setState(State.READY);
+  }, LIGHT_SEQUENCE.length * TREE_INTERVAL_MS);
+}
+
+function startGame() {
+  clearScheduledTimeouts();
+  greenTimestamp = 0;
+  setState(State.WAITING);
+
+  const delay = RANDOM_DELAY_MIN_MS + Math.random() * RANDOM_DELAY_RANGE_MS;
+  schedule(() => {
+    beginTreeSequence();
   }, delay);
 }
 
 function reset() {
-  clearTimeout(timeoutId);
-  timeoutId = null;
+  clearScheduledTimeouts();
+  greenTimestamp = 0;
   setState(State.IDLE);
 }
 
 // ── Event Handlers ──
 panel.addEventListener('click', () => {
   if (state === State.READY) {
-    const reactionTime = Math.round(performance.now() - readyTimestamp);
+    const reactionTime = Math.round(performance.now() - greenTimestamp);
     showResult(reactionTime);
-  } else if (state === State.WAITING) {
-    clearTimeout(timeoutId);
-    setState(State.FALSE_START);
+  } else if (state === State.WAITING || state === State.COUNTDOWN) {
+    triggerRedLight();
   }
 });
 
 startBtn.addEventListener('click', () => {
-  if (state === State.IDLE || state === State.RESULT || state === State.FALSE_START) {
+  if (state === State.IDLE || state === State.RESULT || state === State.RED_LIGHT) {
     startGame();
   }
 });
@@ -125,7 +192,7 @@ startBtn.addEventListener('click', () => {
 // ── Best Score Display ──
 function updateBestScore() {
   const best = getBestScore();
-  bestScoreEl.textContent = best !== null ? 'Best: ' + best + ' ms' : '';
+  bestScoreEl.textContent = best !== null ? 'Best light: ' + best + ' ms' : '';
 }
 
 // ── Leaderboard ──
@@ -134,14 +201,14 @@ function renderLeaderboard() {
 
   if (times.length === 0) {
     leaderboardList.innerHTML =
-      '<li class="leaderboard-empty">Play to set your first time!</li>';
+      '<li class="leaderboard-empty">Stage up and log your first launch!</li>';
     return;
   }
 
   leaderboardList.innerHTML = times
     .map((time, i) => {
       const rank = i + 1;
-      const label = rank === 1 ? 'Fastest' : '#' + rank;
+      const label = rank === 1 ? 'Holeshot' : '#' + rank;
       return (
         '<li class="leaderboard-item leaderboard-item--' + rank + '">' +
         '<span class="leaderboard-name">' + label + '</span>' +
@@ -153,5 +220,6 @@ function renderLeaderboard() {
 }
 
 // ── Init ──
+reset();
 updateBestScore();
 renderLeaderboard();
